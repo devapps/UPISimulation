@@ -10,14 +10,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.IntStream;
 
 import static junit.framework.Assert.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -62,7 +66,7 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
         ExecutorService executor = Executors.newFixedThreadPool(nThreads);
         Map<Future<String>, String> responses = new HashMap<>();
 
-        for (int i=0; i < nThreads / 2; i++) {
+        for (int i = 0; i < nThreads / 2; i++) {
             requestId = String.valueOf(new Random().nextInt(1000));
             expectedJsonResponse = "{\"uid\":\""+requestId+"\"}";
 
@@ -93,7 +97,7 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
         ExecutorService executor = Executors.newFixedThreadPool(nThreads);
         Map<Future<String>, String> responses = new HashMap<>();
 
-        for (int i=0; i < nThreads / 2; i++) {
+        for (int i = 0; i < nThreads / 2; i++) {
             requestId = String.valueOf(new Random().nextInt(1000));
             expectedJsonResponse = "{\"uid\":\""+requestId+"\"}";
 
@@ -113,7 +117,59 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
                 e.printStackTrace();
             }
         });
+    }
 
+    @Test
+    public void should_process_request_more_randomly() throws Exception {
+        int nThreads = 1000;
+        IntStream intStream = new Random().ints(nThreads);
+        List<String> requestIdList = new ArrayList<>();
+        intStream.forEach(i -> requestIdList.add(String.valueOf(i)));
+
+        Map<Future<String>, String> responses = new ConcurrentHashMap<>();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+                requestIdList.forEach(requestId -> {
+                    Future<String> futureResponse = executorService.submit(new CallUPI(requestId));
+                    String expectedJsonResponse = "{\"uid\":\"" + requestId + "\"}";
+                    responses.put(futureResponse, expectedJsonResponse);
+                });
+            }
+        });
+
+        Thread.sleep(1000);
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+                requestIdList.forEach(requestId -> {
+                    try {
+                        Thread.sleep(new Random().nextInt(5000));
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    Future<String> callbackFutureResponse = executorService.submit(new CallUPICallback(requestId));
+                    responses.put(callbackFutureResponse, "done");
+                });
+            }
+        });
+
+        responses.forEach((response, expectedResult) -> {
+            try {
+                System.out.println(response.get());
+                assertEquals(expectedResult, response.get());
+            }
+            catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     private class CallUPI implements Callable<String> {
