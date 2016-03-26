@@ -1,4 +1,4 @@
-package com.websystique.springmvc.model;
+package com.msg.upi.model;
 
 public class BalanceRequest extends UPIRequest {
     public BalanceRequest() {

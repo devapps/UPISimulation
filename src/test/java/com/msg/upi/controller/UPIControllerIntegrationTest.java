@@ -1,7 +1,7 @@
-package com.websystique.springmvc.controller;
+package com.msg.upi.controller;
 
-import com.websystique.springmvc.AbstractSpringIntegrationTest;
-import com.websystique.springmvc.model.BalanceRequest;
+import com.msg.upi.AbstractSpringIntegrationTest;
+import com.msg.upi.model.BalanceRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;

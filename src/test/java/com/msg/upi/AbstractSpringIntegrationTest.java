@@ -1,7 +1,7 @@
-package com.websystique.springmvc;
+package com.msg.upi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.websystique.springmvc.configuration.ApplicationConfiguration;
+import com.msg.upi.configuration.ApplicationConfiguration;
 import org.junit.runner.RunWith;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;

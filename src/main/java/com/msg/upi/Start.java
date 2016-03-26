@@ -1,4 +1,4 @@
-package com.websystique.springmvc;
+package com.msg.upi;
 
 
 import org.mortbay.jetty.Connector;

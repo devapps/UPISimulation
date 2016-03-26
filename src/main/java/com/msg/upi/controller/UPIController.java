@@ -1,7 +1,7 @@
-package com.websystique.springmvc.controller;
+package com.msg.upi.controller;
 
-import com.websystique.springmvc.model.BalanceRequest;
-import com.websystique.springmvc.model.BalanceResponse;
+import com.msg.upi.model.BalanceResponse;
+import com.msg.upi.model.BalanceRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
