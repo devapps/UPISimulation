@@ -1,11 +1,9 @@
 package com.msg.upi.dao;
 
-import com.msg.upi.model.BalanceRequest;
 import com.msg.upi.model.WaitingUPIRequest;
 
-import java.util.concurrent.CountDownLatch;
-
 public interface RequestStore {
-    void put(BalanceRequest balanceRequest, CountDownLatch latch);
+    void put(String requestId, WaitingUPIRequest latch);
     WaitingUPIRequest get(String requestId);
+    void removeFromStore(String requestId);
 }

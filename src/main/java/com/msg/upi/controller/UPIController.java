@@ -29,10 +29,12 @@ public class UPIController {
 
     @RequestMapping(value = "fetchBalance", method = RequestMethod.POST)
     public ResponseEntity<?> fetchBalance(@RequestBody BalanceRequest balanceRequest) {
-        System.out.println("Request -->" + balanceRequest.getUid());
+        String requestId = balanceRequest.getUid();
+
+        System.out.println("Request -->" + requestId);
         CountDownLatch latch = new CountDownLatch(1);
 
-        StopWatch sw = new StopWatch("UPIRequestId#"+ balanceRequest.getUid());
+        StopWatch sw = new StopWatch("UPIRequestId#"+ requestId);
         sw.start();
 
         ncpiService.requestFetchBalance(balanceRequest, latch);
@@ -45,7 +47,7 @@ public class UPIController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
-        BalanceResponse balanceResponse = new BalanceResponse(balanceRequest.getUid());
+        BalanceResponse balanceResponse = ncpiService.processResponse(requestId);
 
         sw.stop();
         System.out.println(sw.shortSummary());

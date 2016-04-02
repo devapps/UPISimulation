@@ -8,6 +8,7 @@ import com.msg.upi.model.WaitingUPIRequest;
 import com.msg.upi.model.npci.Ack;
 import com.msg.upi.model.npci.NPCIFetchBalanceRequest;
 import com.msg.upi.model.npci.NPCIFetchBalanceResponse;
+import com.msg.upi.model.npci.NPCIResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,21 +28,28 @@ public class NCPIService {
     }
 
     public void requestFetchBalance(BalanceRequest balanceRequest, CountDownLatch latch) {
-        cacheRequestStore.put(balanceRequest, latch);
+        cacheRequestStore.put(balanceRequest.getUid(), new WaitingUPIRequest(balanceRequest, latch));
         NPCIFetchBalanceRequest npciRequest = new NPCIFetchBalanceRequest();
         Ack ack = ncpiDao.invokeFetchBalance(npciRequest);
     }
 
-    public BalanceResponse callbackFetchBalance(NPCIFetchBalanceResponse npciResponse) {
+    public void callbackFetchBalance(NPCIFetchBalanceResponse npciResponse) {
         String requestId = npciResponse.getUid();
+
         WaitingUPIRequest ifPresent = cacheRequestStore.get(requestId);
-        if (ifPresent == null) {
-            throw new UPIRequestIdNotFoundInCache("Request Id not found, release the waiting mobile thread" + requestId);
-        }
+        ifPresent.withNPCIResponse(npciResponse);
+        cacheRequestStore.put(requestId, ifPresent);
 
         ifPresent.getLatch().countDown();
+    }
+
+    public BalanceResponse processResponse(String requestId) {
+        WaitingUPIRequest ifPresent = cacheRequestStore.get(requestId);
+        NPCIResponse npciResponse = ifPresent.getNpciResponse();
+        //process response
+
+        cacheRequestStore.removeFromStore(requestId);
 
         return new BalanceResponse(requestId);
     }
-
 }
