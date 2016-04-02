@@ -17,24 +17,24 @@ import java.util.concurrent.CountDownLatch;
 public class NCPIService {
 
     private NCPIDao ncpiDao;
-    private RequestStore requestStore;
+    private RequestStore cacheRequestStore;
 
 
     @Autowired
-    public NCPIService(NCPIDao ncpiDao, RequestStore requestStore) {
+    public NCPIService(NCPIDao ncpiDao, RequestStore cacheRequestStore) {
         this.ncpiDao = ncpiDao;
-        this.requestStore = requestStore;
+        this.cacheRequestStore = cacheRequestStore;
     }
 
     public void requestFetchBalance(BalanceRequest balanceRequest, CountDownLatch latch) {
-        requestStore.put(balanceRequest.getUid(), balanceRequest, latch);
+        cacheRequestStore.put(balanceRequest, latch);
         NPCIFetchBalanceRequest npciRequest = new NPCIFetchBalanceRequest();
         Ack ack = ncpiDao.invokeFetchBalance(npciRequest);
     }
 
     public BalanceResponse callbackFetchBalance(NPCIFetchBalanceResponse npciResponse) {
         String requestId = npciResponse.getUid();
-        WaitingUPIRequest ifPresent = requestStore.get(requestId);
+        WaitingUPIRequest ifPresent = cacheRequestStore.get(requestId);
         if (ifPresent == null) {
             throw new UPIRequestIdNotFoundInCache("Request Id not found, release the waiting mobile thread" + requestId);
         }
