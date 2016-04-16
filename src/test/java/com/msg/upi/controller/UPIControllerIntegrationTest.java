@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
     @Test
     public void should_fetch_correct_balance() throws Exception {
         String requestId = "1";
-        String expectedJsonResponse = "{\"uid\":\""+requestId+"\"}";
+        String expectedJsonResponse = "{\"uid\":\"" + requestId + "\"}";
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         Future<String> futureResponse = executor.submit(new CallUPI(requestId));
@@ -68,7 +69,7 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
 
         for (int i = 0; i < nThreads / 2; i++) {
             requestId = String.valueOf(new Random().nextInt(1000));
-            expectedJsonResponse = "{\"uid\":\""+requestId+"\"}";
+            expectedJsonResponse = "{\"uid\":\"" + requestId + "\"}";
 
             Future<String> futureResponse = executor.submit(new CallUPI(requestId));
             Thread.sleep(1000);
@@ -99,7 +100,7 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
 
         for (int i = 0; i < nThreads / 2; i++) {
             requestId = String.valueOf(new Random().nextInt(1000));
-            expectedJsonResponse = "{\"uid\":\""+requestId+"\"}";
+            expectedJsonResponse = "{\"uid\":\"" + requestId + "\"}";
 
             Future<String> futureResponse = executor.submit(new CallUPI(requestId));
             Thread.sleep(1000);
@@ -121,7 +122,7 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
 
     @Test
     public void should_process_request_more_randomly() throws Exception {
-        int nThreads = 1000;
+        int nThreads = 1005;
         IntStream intStream = new Random().ints(nThreads);
         List<String> requestIdList = new ArrayList<>();
         intStream.forEach(i -> requestIdList.add(String.valueOf(i)));
@@ -143,27 +144,31 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
         });
 
         Thread.sleep(1000);
+        Collections.shuffle(requestIdList);
 
         executor.submit(new Runnable() {
             @Override
             public void run() {
                 ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
-                requestIdList.forEach(requestId -> {
-                    try {
-                        Thread.sleep(new Random().nextInt(5000));
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    Future<String> callbackFutureResponse = executorService.submit(new CallUPICallback(requestId));
-                    responses.put(callbackFutureResponse, "done");
-                });
+                requestIdList
+                        .parallelStream()
+                        .forEach(
+                                requestId -> {
+                                    /*try {
+                                        Thread.sleep(new Random().nextInt(5000));
+                                    }
+                                    catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }*/
+                                    Future<String> callbackFutureResponse = executorService.submit(new CallUPICallback(requestId));
+                                    responses.put(callbackFutureResponse, "done");
+                                });
             }
         });
 
         responses.forEach((response, expectedResult) -> {
             try {
-                System.out.println(response.get());
+                //System.out.println(response.get());
                 assertEquals(expectedResult, response.get());
             }
             catch (InterruptedException | ExecutionException e) {
@@ -180,13 +185,19 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
         }
 
         public String call() throws Exception {
-            MvcResult mvcResult = mockMvc.perform(post("/upi/1.0/fetchBalance")
-                    .contentType(contentType)
-                    .content(asJsonString(new BalanceRequest(requestId))))
-                    .andExpect(status().isOk())
-                    .andReturn();
-
-            return mvcResult.getResponse().getContentAsString();
+            MvcResult mvcResult;
+            try {
+                mvcResult = mockMvc.perform(post("/upi/1.0/fetchBalance")
+                        .contentType(contentType)
+                        .content(asJsonString(new BalanceRequest(requestId))))
+                        .andExpect(status().isOk())
+                        .andReturn();
+                return mvcResult.getResponse().getContentAsString();
+            }
+            catch (Exception e) {
+                System.out.println(e.getMessage());
+                return "error";
+            }
         }
     }
 
@@ -198,11 +209,16 @@ public class UPIControllerIntegrationTest extends AbstractSpringIntegrationTest 
         }
 
         public String call() throws Exception {
-            mockMvc.perform(post("/upi/1.0/callback/fetchBalance")
-                    .contentType(contentType)
-                    .content(asJsonString(new NPCIFetchBalanceRequest(callbackRequestId))))
-                    .andExpect(status().isOk());
-
+            try {
+                mockMvc.perform(post("/upi/1.0/callback/fetchBalance")
+                        .contentType(contentType)
+                        .content(asJsonString(new NPCIFetchBalanceRequest(callbackRequestId))))
+                        .andExpect(status().isOk());
+            }
+            catch (Exception e) {
+                System.out.println(e.getMessage());
+                return "error";
+            }
             return "done";
         }
     }

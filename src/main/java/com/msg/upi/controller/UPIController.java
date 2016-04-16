@@ -40,20 +40,19 @@ public class UPIController {
         ncpiService.requestFetchBalance(balanceRequest, latch);
 
         try {
-            latch.await(2, TimeUnit.MINUTES);
+            latch.await(5, TimeUnit.MINUTES);
+            BalanceResponse balanceResponse = ncpiService.processResponse(requestId);
+
+            sw.stop();
+            System.out.println(sw.shortSummary());
+
+            return new ResponseEntity<>(balanceResponse, HttpStatus.OK);
         }
         catch (InterruptedException e) {
             System.out.println("Will not wait any more now.");
+            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-
-        BalanceResponse balanceResponse = ncpiService.processResponse(requestId);
-
-        sw.stop();
-        System.out.println(sw.shortSummary());
-
-        return new ResponseEntity<>(balanceResponse, HttpStatus.OK);
-
     }
 
 
