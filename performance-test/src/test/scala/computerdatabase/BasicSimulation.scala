@@ -20,13 +20,41 @@ class BasicSimulation extends Simulation {
 
   private val fileBody: CompositeByteArrayBody = ELFileBody("fetchBalanceRequest.json")
 
-  val scn = scenario("Scenario Name") // A scenario is a chain of requests and pauses
+  val scn = scenario("Fetch Balance") // A scenario is a chain of requests and pauses
     .exec(session => session.set("sequenceId", Random.nextInt(1000)))
     .exec(http("FetchBalance")
       .post("/fetchBalance")
       //.body(StringBody("""{ "uid": "1" }""")).asJSON)
       .body(fileBody).asJSON)
-    .pause(2)
+/*
+      .resources(http("CallbackFetchBalance")
+        .post("/callback/fetchBalance")
+        .body(fileBody).asJSON))
+*/
+/*
+    .exec(http("CallbackFetchBalance")
+      .post("/callback/fetchBalance")
+      .body(fileBody).asJSON)*/
 
-  setUp(scn.inject(atOnceUsers(1000)).protocols(httpConf))
+
+  setUp(
+    scn.inject(rampUsers(1) over(1 second))
+    /*
+
+    nothingFor(1 second), // 1
+    atOnceUsers(10) // 2
+    rampUsers(1) over(1 second) // 3
+
+        constantUsersPerSec(20) during(15 seconds), // 4
+    */
+    //constantUsersPerSec(20) during(15 seconds) randomized // 5
+    /*
+        rampUsersPerSec(10) to(20) during(10 minutes), // 6
+        rampUsersPerSec(10) to(20) during(10 minutes) randomized, // 7
+        splitUsers(1000) into(rampUsers(10) over(10 seconds)) separatedBy(10 seconds), // 8
+        splitUsers(1000) into(rampUsers(10) over(10 seconds)) separatedBy(atOnceUsers(30)), // 9
+        heavisideUsers(1000) over(20 seconds) // 10
+    */
+  )
+    .protocols(httpConf)
 }
